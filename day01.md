@@ -86,3 +86,81 @@ I learned that branches allow developers to work on changes
 
 without directly modifying the main branch.
 
+
+
+
+
+\## Day 1 Summary
+
+
+
+Today I learned the basic Git and GitHub workflow.
+
+
+
+\### Git commands practiced
+
+
+
+\- git status
+
+\- git add
+
+\- git commit
+
+\- git push
+
+\- git checkout
+
+\- git branch
+
+\- git pull
+
+
+
+\### GitHub concepts practiced
+
+
+
+\- Repository
+
+\- Branch
+
+\- Commit
+
+\- Pull Request
+
+\- Merge
+
+
+
+\### Professional workflow
+
+
+
+main
+
+→ feature branch
+
+→ changes
+
+→ commit
+
+→ push
+
+→ Pull Request
+
+→ review
+
+→ merge
+
+→ main
+
+
+
+\## Next Goal
+
+
+
+Learn GitHub Issues, GitHub Projects, and GitHub Actions.
+
