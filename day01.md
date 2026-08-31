@@ -66,3 +66,23 @@ GitHub
 
 \- Created my first learning file
 
+
+
+
+
+\## Branch Practice
+
+
+
+Today I created my first Git branch:
+
+
+
+day01-practice
+
+
+
+I learned that branches allow developers to work on changes
+
+without directly modifying the main branch.
+
