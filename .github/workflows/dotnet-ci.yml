@@ -31,3 +31,12 @@ jobs:
 
       - name: Test
         run: dotnet test ProductApi/ProductApi.csproj --no-build
+
+      - name: Restore dependencies
+        run: dotnet restore ProductApi.Tests/ProductApi.Tests.csproj
+
+      - name: Build
+        run: dotnet build ProductApi.Tests/ProductApi.Tests.csproj --no-restore
+
+      - name: Test
+        run: dotnet test ProductApi.Tests/ProductApi.Tests.csproj --no-build
