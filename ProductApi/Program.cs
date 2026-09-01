@@ -18,7 +18,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-//app.MapControllers();
+app.MapControllers();
 app.MapGet("/api/products/{id}", (int id) =>
 {
     var products = new[]
