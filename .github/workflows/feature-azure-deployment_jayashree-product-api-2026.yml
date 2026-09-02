@@ -23,11 +23,20 @@ jobs:
         with:
           dotnet-version: '10.x'
 
-      - name: Build with dotnet
-        run: dotnet build --configuration Release
+      - name: Build Product API
+        run: dotnet build ProductApi/ProductApi.csproj --configuration Release
+      
+      - name: Restore tests
+        run: dotnet restore ProductApi.Tests/ProductApi.Tests.csproj
 
-      - name: dotnet publish
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
+      - name: Build tests
+        run: dotnet build ProductApi.Tests/ProductApi.Tests.csproj --configuration Release --no-restore
+
+      - name: Run unit tests
+        run: dotnet test ProductApi.Tests/ProductApi.Tests.csproj --configuration Release --no-build
+
+      - name: Publish Product API
+        run: dotnet publish ProductApi/ProductApi.csproj --configuration Release --output ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
