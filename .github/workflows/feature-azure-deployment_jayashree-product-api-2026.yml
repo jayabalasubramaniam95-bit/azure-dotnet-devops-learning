@@ -16,23 +16,27 @@ jobs:
       contents: read #This is required for actions/checkout
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.x'
 
-      - name: Build Product API
-        run: dotnet build ProductApi/ProductApi.csproj --configuration Release
+      - name: Restore Product API
+        run: dotnet restore ProductApi/ProductApi.csproj 
       
       - name: Restore tests
         run: dotnet restore ProductApi.Tests/ProductApi.Tests.csproj
+      
+      - name: Build Product API
+        run: dotnet build ProductApi/ProductApi.csproj --configuration Release --no-restore
 
       - name: Build tests
         run: dotnet build ProductApi.Tests/ProductApi.Tests.csproj --configuration Release --no-restore
 
-      - name: Run unit tests
+      - name: Run xUnit tests
         run: dotnet test ProductApi.Tests/ProductApi.Tests.csproj --configuration Release --no-build
 
       - name: Publish Product API
@@ -42,7 +46,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          path: ${{ env.DOTNET_ROOT }}/myapp
 
   deploy:
     runs-on: ubuntu-latest
