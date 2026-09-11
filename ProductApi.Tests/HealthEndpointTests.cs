@@ -10,7 +10,7 @@ namespace ProductApi.Tests
 {
    public class HealthEndpointTests : IClassFixture<WebApplicationFactory<Program>>
 {
-    p private readonly HttpClient _client;
+    private readonly HttpClient _client;
 
     public HealthEndpointTests(
         WebApplicationFactory<Program> factory)
