@@ -34,6 +34,15 @@ app.MapGet("/api/products/{id}", (int id) =>
         ? Results.Ok(product)
         : Results.NotFound();
 });
+
+app.MapGet("/health", () =>
+{
+    return Results.Ok(new
+    {
+        status = "Healthy",
+        version = "1.0.0"
+    });
+});
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
