@@ -1,4 +1,6 @@
 var builder = WebApplication.CreateBuilder(args);
+// Read configuration
+var configuration = builder.Configuration;
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -43,6 +45,18 @@ app.MapGet("/health", () =>
         version = "1.0.0"
     });
 });
+// Configuration endpoint
+app.MapGet("/config", () =>
+{
+    var apiVersion = configuration["ApiVersion"];
+     var environmentValue = Environment.GetEnvironmentVariable("ApiVersion");
+
+    return Results.Ok(new
+    {
+        apiVersion, environmentValue
+    });
+});
+
 app.Run();
 
 public partial class Program
