@@ -1,10 +1,10 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Text;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using System.Text;
-using ProductApi.Services;
 using ProductApi.Security;
+using ProductApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -140,20 +140,27 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+
 app.Use(async (context, next) =>
 {
-    if (context.Request.Path.StartsWithSegments("/api/products"))
+    if (context.Request.Path.StartsWithSegments("/api/security-test"))
     {
-        if (!context.Request.Headers.TryGetValue("X-API-Key", out var providedApiKey))
+        var configuredApiKey =
+            app.Configuration["Security:ApiKey"];
+
+        var suppliedApiKey =
+            context.Request.Headers["X-API-Key"].FirstOrDefault();
+
+        if (string.IsNullOrEmpty(suppliedApiKey))
         {
-            context.Response.StatusCode = 401;
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsync("API key is missing.");
             return;
         }
 
-        if (providedApiKey != apiKey)
+        if (suppliedApiKey != configuredApiKey)
         {
-            context.Response.StatusCode = 401;
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsync("Invalid API key.");
             return;
         }
@@ -161,7 +168,6 @@ app.Use(async (context, next) =>
 
     await next();
 });
-
 // =====================================================
 // 7. HTTP REQUEST PIPELINE
 // =====================================================
