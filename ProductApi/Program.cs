@@ -146,22 +146,30 @@ app.Use(async (context, next) =>
     if (context.Request.Path.StartsWithSegments("/api/security-test"))
     {
         var configuredApiKey =
-            app.Configuration["Security:ApiKey"];
+            app.Configuration["ApiKey:Value"];
 
         var suppliedApiKey =
             context.Request.Headers["X-API-Key"].FirstOrDefault();
 
         if (string.IsNullOrEmpty(suppliedApiKey))
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsync("API key is missing.");
+            context.Response.StatusCode =
+                StatusCodes.Status401Unauthorized;
+
+            await context.Response.WriteAsync(
+                "API key is missing.");
+
             return;
         }
 
         if (suppliedApiKey != configuredApiKey)
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsync("Invalid API key.");
+            context.Response.StatusCode =
+                StatusCodes.Status401Unauthorized;
+
+            await context.Response.WriteAsync(
+                "Invalid API key.");
+
             return;
         }
     }
@@ -172,13 +180,10 @@ app.Use(async (context, next) =>
 // 7. HTTP REQUEST PIPELINE
 // =====================================================
 
-if (app.Environment.IsDevelopment())
-{
     app.MapOpenApi();
 
     app.UseSwagger();
     app.UseSwaggerUI();
-}
 
 app.UseHttpsRedirection();
 
@@ -220,6 +225,13 @@ app.MapGet("/api/products/{id}", (int id) =>
         ? Results.Ok(product)
         : Results.NotFound();
 });
+app.MapGet("/api/security-test", () =>
+{
+    return Results.Ok(new
+    {
+        message = "Authenticated successfully"
+    });
+});
 
 // =====================================================
 // 10. HEALTH ENDPOINT
@@ -251,6 +263,7 @@ app.MapGet("/config", () =>
         environmentValue
     });
 });
+
 
 
 // =====================================================
