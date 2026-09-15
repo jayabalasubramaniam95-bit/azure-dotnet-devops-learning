@@ -1,12 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
-namespace ProductApi.Controllers;
-
+namespace ProductApi.Controllers
+{
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
 {
     [HttpGet]
+      [Authorize(AuthenticationSchemes = "ApiKey")]
     public IActionResult GetProducts()
     {
         var products = new[]
@@ -18,4 +21,16 @@ public class ProductsController : ControllerBase
 
         return Ok(products);
     }
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("{id}")]
+public IActionResult Delete(int id)
+{
+    // Learning example
+    return Ok(new
+    {
+        message = $"Product {id} deleted successfully."
+    });
+}
+
+}
 }
