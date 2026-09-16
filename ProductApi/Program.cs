@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using ProductApi.Models;
 using ProductApi.Security;
 using ProductApi.Services;
 
@@ -205,7 +206,7 @@ app.MapGet("/api-key-status", () =>
     {
         return Results.Problem("API key is not configured.");
     }
-
+      
     return Results.Ok("API key is configured.");
 });
 
@@ -214,17 +215,51 @@ app.MapGet("/api/products/{id}", (int id) =>
 {
     var products = new[]
     {
-        new { Id = 1, Name = "Laptop", Price = 1200 },
-        new { Id = 2, Name = "Monitor", Price = 450 },
-        new { Id = 3, Name = "Keyboard", Price = 100 }
+        new { Id = 1, Name = "Laptop", Price = 1200m },
+        new { Id = 2, Name = "Monitor", Price = 450m },
+        new { Id = 3, Name = "Keyboard", Price = 100m }
     };
 
-    var product = products.FirstOrDefault(p => p.Id == id);
+    var product =
+        products.FirstOrDefault(p => p.Id == id);
 
-    return product is not null
-        ? Results.Ok(product)
-        : Results.NotFound();
+    if (product is null)
+    {
+        return Results.NotFound(new
+        {
+            message = $"Product with ID {id} was not found."
+        });
+    }
+
+    return Results.Ok(product);
 });
+app.MapPost("/api/products", (
+    CreateProductRequest request) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Name))
+    {
+        return Results.BadRequest(new
+        {
+            message = "Product name is required."
+        });
+    }
+
+    if (request.Price <= 0)
+    {
+        return Results.BadRequest(new
+        {
+            message = "Product price must be greater than zero."
+        });
+    }
+
+    var product = new ProductResponse(
+        4,
+        request.Name,
+        request.Price);
+
+    return Results.Ok(product);
+});
+
 app.MapGet("/api/security-test", () =>
 {
     return Results.Ok(new

@@ -1,5 +1,6 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using ProductApi.Models;
 
 namespace ProductApi.Controllers
 {
@@ -8,8 +9,9 @@ namespace ProductApi.Controllers
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
 {
+    
     [HttpGet]
-      [Authorize(AuthenticationSchemes = "ApiKey")]
+    [Authorize(AuthenticationSchemes = "ApiKey")]
     public IActionResult GetProducts()
     {
         var products = new[]
@@ -21,6 +23,7 @@ public class ProductsController : ControllerBase
 
         return Ok(products);
     }
+        
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
 public IActionResult Delete(int id)
@@ -32,5 +35,18 @@ public IActionResult Delete(int id)
     });
 }
 
-}
+         [Authorize(Roles = "Admin")]                                             
+        [HttpPost]
+    public IActionResult CreateProduct(
+        CreateProductRequest request)
+    {
+        var product = new ProductResponse(
+            4,
+            request.Name!,
+            request.Price);
+
+        return Ok(product);
+    }
+
+    }
 }
