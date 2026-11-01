@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using ProductApi.Exceptions;
+using ProductApi.Middleware;
 using ProductApi.Models;
 using ProductApi.Security;
 using ProductApi.Services;
@@ -85,12 +87,19 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<JwtTokenService>();
 
+
 // =====================================================
 // 5. API SERVICES
 // =====================================================
 
 // Controllers
 builder.Services.AddControllers();
+
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 // OpenAPI
 builder.Services.AddOpenApi();
@@ -140,6 +149,9 @@ builder.Services.AddSwaggerGen(options =>
 // =====================================================
 
 var app = builder.Build();
+app.UseExceptionHandler();
+app.UseMiddleware<RequestIdMiddleware>();
+app.UseMiddleware<RequestLoggingMiddleware>();
 
 
 app.Use(async (context, next) =>
@@ -210,29 +222,6 @@ app.MapGet("/api-key-status", () =>
     return Results.Ok("API key is configured.");
 });
 
-
-app.MapGet("/api/products/{id}", (int id) =>
-{
-    var products = new[]
-    {
-        new { Id = 1, Name = "Laptop", Price = 1200m },
-        new { Id = 2, Name = "Monitor", Price = 450m },
-        new { Id = 3, Name = "Keyboard", Price = 100m }
-    };
-
-    var product =
-        products.FirstOrDefault(p => p.Id == id);
-
-    if (product is null)
-    {
-        return Results.NotFound(new
-        {
-            message = $"Product with ID {id} was not found."
-        });
-    }
-
-    return Results.Ok(product);
-});
 app.MapPost("/api/products", (
     CreateProductRequest request) =>
 {
@@ -272,14 +261,19 @@ app.MapGet("/api/security-test", () =>
 // 10. HEALTH ENDPOINT
 // =====================================================
 
-app.MapGet("/health", () =>
-{
-    return Results.Ok(new
+    app.MapGet("/health", (
+        HttpContext context,
+        ILogger<Program> logger) =>
     {
-        status = "Healthy",
-        version = "1.0.0"
+        logger.LogInformation(
+            "Health check completed successfully. RequestId={RequestId}",
+            context.TraceIdentifier);
+
+        return Results.Ok(new
+        {
+            status = "Healthy"
+        });
     });
-});
 
 // =====================================================
 // 11. CONFIGURATION ENDPOINT
