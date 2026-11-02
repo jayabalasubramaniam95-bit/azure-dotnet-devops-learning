@@ -1,4 +1,5 @@
-name: Build and deploy ASP.Net Core app to Azure Web App - jayashree-product-api-2026
+
+name: Build and publish Product API Docker image
 
 on:
   push:
@@ -8,16 +9,20 @@ on:
   workflow_dispatch:
     inputs:
       rollback_commit:
-        description: 'Commit SHA to deploy. Leave empty to deploy current branch.'
+        description: 'Commit SHA to build. Leave empty to build current branch.'
         required: false
         default: ''
 
+env:
+  IMAGE_NAME: ghcr.io/jayabalasubramaniam95-bit/productapi
+
 jobs:
-  build:
+  build-test-publish:
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
+      packages: write
 
     steps:
       - name: Checkout code
@@ -25,12 +30,14 @@ jobs:
         with:
           ref: ${{ inputs.rollback_commit || github.ref }}
 
-      - name: Show deployment commit
+      - name: Show selected commit
+        id: commit
         run: |
-          echo "Deploying commit:"
-          git rev-parse HEAD
+          SHA=$(git rev-parse HEAD)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "Building commit: $SHA"
 
-      - name: Set up .NET Core
+      - name: Set up .NET 10
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.x'
@@ -50,104 +57,28 @@ jobs:
       - name: Run xUnit tests
         run: dotnet test ProductApi.Tests/ProductApi.Tests.csproj --configuration Release --no-build
 
-      - name: Publish Product API
-        run: dotnet publish ProductApi/ProductApi.csproj \
-          --configuration Release \
-          --output ${{ env.DOTNET_ROOT }}/myapp
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          name: .net-app
-          path: ${{ env.DOTNET_ROOT }}/myapp
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
         with:
-          name: .net-app
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ steps.commit.outputs.sha }}
 
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_7A5612671F7547C291F8565B2208AD1F }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_922802AA727E46E991A03F78B620B92F }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_0FFD9D532AA5455F9FE7B1B92C8EBA80 }}
-
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'jayashree-product-api-2026'
-          slot-name: 'Production'
-          package: .
-
-      - name: Wait for application startup
-        run: sleep 15
-
-      - name: Verify health endpoint
-        shell: bash
+      - name: Deployment preparation successful
         run: |
-          URL="https://jayashree-product-api-2026.azurewebsites.net/health"
-
-          echo "Checking health endpoint..."
-
-          for i in {1..5}; do
-            STATUS=$(curl \
-              --silent \
-              --output /dev/null \
-              --write-out "%{http_code}" \
-              --max-time 30 \
-              "$URL")
-
-            echo "Health check attempt $i returned HTTP $STATUS"
-
-            if [ "$STATUS" -eq 200 ]; then
-              echo "Health check passed."
-              exit 0
-            fi
-
-            echo "Waiting 10 seconds..."
-            sleep 10
-          done
-
-          echo "Health check failed."
-          exit 1
-
-      - name: Verify product API endpoint
-        shell: bash
-        run: |
-          URL="https://jayashree-product-api-2026.azurewebsites.net/api/products/1"
-
-          echo "Checking product API..."
-
-          STATUS=$(curl \
-            --silent \
-            --output /dev/null \
-            --write-out "%{http_code}" \
-            --max-time 30 \
-            "$URL")
-
-          echo "Product API returned HTTP $STATUS"
-
-          if [ "$STATUS" -ne 200 ]; then
-            echo "Product API verification failed."
-            exit 1
-          fi
-
-          echo "Product API verification passed."
-
-      - name: Deployment verification successful
-        run: |
-          echo "Deployment completed successfully."
-          echo "Commit deployed:"
-          echo "${{ inputs.rollback_commit || github.sha }}"
+          echo "Docker image built and published successfully."
+          echo "Image: $IMAGE_NAME"
+          echo "Commit: ${{ steps.commit.outputs.sha }}"
