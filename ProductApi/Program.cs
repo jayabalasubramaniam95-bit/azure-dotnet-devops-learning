@@ -261,19 +261,20 @@ app.MapGet("/api/security-test", () =>
 // 10. HEALTH ENDPOINT
 // =====================================================
 
-    app.MapGet("/health", (
-        HttpContext context,
-        ILogger<Program> logger) =>
-    {
-        logger.LogInformation(
-            "Health check completed successfully. RequestId={RequestId}",
-            context.TraceIdentifier);
+   app.MapGet("/health", (
+    HttpContext context,
+    ILogger<Program> logger) =>
+{
+    logger.LogInformation(
+        "Health check completed successfully. RequestId={RequestId}",
+        context.TraceIdentifier);
 
-        return Results.Ok(new
-        {
-            status = "Healthy"
-        });
+    return Results.Ok(new
+    {
+        status = "Healthy",
+        version = "1.0.0"
     });
+});
 
 // =====================================================
 // 11. CONFIGURATION ENDPOINT
