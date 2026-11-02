@@ -1,42 +1,33 @@
-name: .NET CI
+
+name: Product API - CI
 
 on:
   push:
     branches:
       - main
-      - "feature/**"
+      - feature/azure-deployment
   pull_request:
     branches:
       - main
 
 jobs:
-  build:
-
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
-
-      - name: Restore dependencies
-        run: dotnet restore ProductApi/ProductApi.csproj
-
-      - name: Build
-        run: dotnet build ProductApi/ProductApi.csproj --no-restore
-
-      - name: Test
-        run: dotnet test ProductApi/ProductApi.csproj --no-build
+          dotnet-version: 10.0.x
 
       - name: Restore dependencies
         run: dotnet restore ProductApi.Tests/ProductApi.Tests.csproj
 
-      - name: Build
-        run: dotnet build ProductApi.Tests/ProductApi.Tests.csproj --no-restore
+      - name: Build project
+        run: dotnet build ProductApi.Tests/ProductApi.Tests.csproj --configuration Release --no-restore
 
-      - name: Test
-        run: dotnet test ProductApi.Tests/ProductApi.Tests.csproj --no-build
+      - name: Run xUnit tests
+        run: dotnet test ProductApi.Tests/ProductApi.Tests.csproj --configuration Release --no-build
