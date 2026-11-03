@@ -15,21 +15,26 @@ on:
 
 env:
   IMAGE_NAME: ghcr.io/jayabalasubramaniam95-bit/productapi
+  RESOURCE_GROUP: rg-dotnet-devops-learning
+  CONTAINER_APP_NAME: productapi-app
 
 jobs:
-  build-test-publish:
+  build-test-publish-deploy:
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
       packages: write
+      id-token: write
 
     steps:
+      # 1. Checkout source code
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.rollback_commit || github.ref }}
 
+      # 2. Identify selected commit
       - name: Show selected commit
         id: commit
         run: |
@@ -37,29 +42,37 @@ jobs:
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
           echo "Building commit: $SHA"
 
+      # 3. Configure .NET 10
       - name: Set up .NET 10
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.x'
 
+      # 4. Restore Product API
       - name: Restore Product API
         run: dotnet restore ProductApi/ProductApi.csproj
 
+      # 5. Restore test project
       - name: Restore tests
         run: dotnet restore ProductApi.Tests/ProductApi.Tests.csproj
 
+      # 6. Build Product API
       - name: Build Product API
         run: dotnet build ProductApi/ProductApi.csproj --configuration Release --no-restore
 
+      # 7. Build tests
       - name: Build tests
         run: dotnet build ProductApi.Tests/ProductApi.Tests.csproj --configuration Release --no-restore
 
+      # 8. Run xUnit tests
       - name: Run xUnit tests
         run: dotnet test ProductApi.Tests/ProductApi.Tests.csproj --configuration Release --no-build
 
+      # 9. Configure Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # 10. Authenticate with GHCR
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -67,6 +80,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # 11. Build and publish Docker image
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -77,8 +91,53 @@ jobs:
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ steps.commit.outputs.sha }}
 
-      - name: Deployment preparation successful
+      # 12. Authenticate with Azure using OIDC
+      - name: Login to Azure using OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # 13. Install Azure Container Apps extension
+      - name: Install Azure Container Apps extension
+        run: az extension add --name containerapp --upgrade
+
+      # 14. Configure private GHCR image access
+      - name: Configure GHCR credentials in Azure
+        env:
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
-          echo "Docker image built and published successfully."
-          echo "Image: $IMAGE_NAME"
+          az containerapp registry set \
+            --name "$CONTAINER_APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --server ghcr.io \
+            --username "$GHCR_USERNAME" \
+            --password "$GHCR_TOKEN"
+
+      # 15. Deploy image to Azure Container Apps
+      - name: Deploy Docker image to Azure
+        run: |
+          az containerapp update \
+            --name "$CONTAINER_APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "${IMAGE_NAME}:${{ steps.commit.outputs.sha }}"
+
+      # 16. Verify Azure deployment
+      - name: Verify Azure deployment
+        run: |
+          az containerapp show \
+            --name "$CONTAINER_APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "{provisioningState:properties.provisioningState,latestRevision:properties.latestRevisionName,latestReadyRevision:properties.latestReadyRevisionName}" \
+            --output yaml
+
+      # 17. Deployment summary
+      - name: Deployment successful
+        run: |
+          echo "Product API deployment workflow completed."
+          echo "Docker image: ${IMAGE_NAME}:${{ steps.commit.outputs.sha }}"
+          echo "Azure Container App: $CONTAINER_APP_NAME"
+          echo "Resource Group: $RESOURCE_GROUP"
           echo "Commit: ${{ steps.commit.outputs.sha }}"
