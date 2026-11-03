@@ -103,7 +103,25 @@ jobs:
       - name: Install Azure Container Apps extension
         run: az extension add --name containerapp --upgrade
 
-      # 14. Configure private GHCR image access
+      # 14. Validate GHCR secrets
+      - name: Validate GHCR secrets
+        env:
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          if [ -z "$GHCR_USERNAME" ]; then
+            echo "GHCR_USERNAME is missing"
+            exit 1
+          fi
+
+          if [ -z "$GHCR_TOKEN" ]; then
+            echo "GHCR_TOKEN is missing"
+            exit 1
+          fi
+
+          echo "Both GHCR credentials are available."
+
+      # 15. Configure private GHCR image access
       - name: Configure GHCR credentials in Azure
         env:
           GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
@@ -116,7 +134,7 @@ jobs:
             --username "$GHCR_USERNAME" \
             --password "$GHCR_TOKEN"
 
-      # 15. Deploy image to Azure Container Apps
+      # 16. Deploy image to Azure Container Apps
       - name: Deploy Docker image to Azure
         run: |
           az containerapp update \
@@ -124,7 +142,7 @@ jobs:
             --resource-group "$RESOURCE_GROUP" \
             --image "${IMAGE_NAME}:${{ steps.commit.outputs.sha }}"
 
-      # 16. Verify Azure deployment
+      # 17. Verify Azure deployment
       - name: Verify Azure deployment
         run: |
           az containerapp show \
@@ -133,7 +151,7 @@ jobs:
             --query "{provisioningState:properties.provisioningState,latestRevision:properties.latestRevisionName,latestReadyRevision:properties.latestReadyRevisionName}" \
             --output yaml
 
-      # 17. Deployment summary
+      # 18. Deployment summary
       - name: Deployment successful
         run: |
           echo "Product API deployment workflow completed."
