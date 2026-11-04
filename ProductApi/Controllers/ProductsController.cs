@@ -95,7 +95,7 @@ public IActionResult Delete(int id)
 public IActionResult TestError()
 {
     throw new InvalidOperationException(
-        "This is a test exceptions.");
+        "This is a test exception.");
 }
 
     }
